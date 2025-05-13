@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>迷宮探險</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: url('mazegame_images/bc1.png') no-repeat center center;
+      background-size: contain;
+      background-color: black;
+      color: #fff;
+      font-family: sans-serif;
+    }
+    .game-screen {
+      display: none;
+      width: 100%;
+      height: 100%;
+      position: relative;
+    }
+    .visible { display: block; }
+    h1 { padding-top: 20px; text-shadow: 2px 2px 4px #000; text-align: center; }
+.character-select {
+  position: absolute;
+  top: 50%;         /* 🎯 控制上下位置 */
+  left: 50%;        /* 🎯 水平置中 */
+  transform: translateX(-50%);
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  border: 3px solid #fff;
+  border-radius: 10px;
+  padding: 10px 20px;
+  background: rgba(0, 0, 0, 0.6);
+}
+    .character {
+      width: 64px;
+      cursor: pointer;
+      transition: transform 0.2s, border 0.2s;
+      border: 3px solid transparent;
+      border-radius: 8px;
+    }
+    .character:hover {
+      transform: scale(1.2);
+    }
+    .character.selected {
+      border-color: gold;
+      background-color: rgba(255, 255, 0, 0.2);
+	  
+
+    }
+    #characterImg {
+      position: absolute;
+      top: 60%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 80px;
+      max-width: 15vw;
+    }
+    .arrow-button {
+      position: absolute;
+      bottom: 30%;
+      width: 95px;
+      height: auto;
+      cursor: pointer;
+    }
+    #leftBtn { left: 30%; }
+    #rightBtn { right: 30%; }
+    button {
+      padding: 8px 20px;
+      font-size: 16px;
+      margin-top: 10px;
+      cursor: pointer;
+    }
+    .stepFlash {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: white;
+      opacity: 0;
+      pointer-events: none;
+      animation: flash .2s ease-out;
+    }
+    @keyframes flash {
+      0% { opacity: 0.5; }
+      100% { opacity: 0; }
+    }
+    .treasure.clicked {
+      pointer-events: none;
+      opacity: 0.6;
+    }
+    @keyframes shake {
+      0%, 100% { transform: rotate(0deg); }
+      25% { transform: rotate(3deg); }
+      75% { transform: rotate(-3deg); }
+    }
+    .treasure.shake {
+      animation: shake 0.4s ease;
+    }
+	#mazeInnerContainer {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+.stepFlash.wrong {
+  background-color: red;
+}
+
+#treasureScreen {
+  background: url('mazegame_images/final.png') no-repeat center center;
+  background-size: contain;
+  background-color: black; /* 背景不會透出底圖 */
+}
+
+#treasureScreen .treasure {
+  width: 128px;
+  margin: 20px;
+}
+
+
+#startButtonWrapper {
+  position: absolute;
+  bottom: 20%;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+}
+
+.arrow-button:hover {
+  transform: scale(1.1);
+}
+.arrow-button:active {
+  transform: scale(0.95);
+}
+
+
+@keyframes advance {
+  0% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(-10px); }
+  100% { transform: translateX(-50%) translateY(0); }
+}
+
+.advanceAnim {
+  animation: advance 0.3s ease;
+}
+
+
+.mistFlash {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(255, 255, 255, 0.2); /* 白霧感 */
+  animation: fadeout 0.3s ease-out;
+  pointer-events: none;
+  z-index: 5;
+}
+
+@keyframes fadeout {
+  0% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+#monsterBox {
+
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 400px;
+  height: 550px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+#monsterImg {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+#battleOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);  /* 遮罩感 */
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  color: white;
+  font-size: 20px; /* 放大字體 */
+}
+
+@keyframes monsterHit {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-8px); }
+  75% { transform: translateX(8px); }
+}
+
+.monster-hit {
+  animation: monsterHit 0.2s ease;
+  filter: brightness(1.5) saturate(2) drop-shadow(0 0 5px red);
+}
+
+@keyframes monsterEnter {
+  0%   { opacity: 0; transform: scale(0.5); }
+  80%  { transform: scale(1.1); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+.monster-in {
+  animation: monsterEnter 0.6s ease-out;
+}
+
+
+
+  </style>
+</head>
+<body>
+  <div id="titleScreen" class="game-screen visible">
+    <h1></h1>
+    <img src="mazegame_images/title.png" width="320">
+    <div class="character-select">
+      <img id="char0" class="character" src="mazegame_images/man1.png" onclick="selectCharacter(0)">
+      <img id="char1" class="character" src="mazegame_images/man2.png" onclick="selectCharacter(1)">
+      <img id="char2" class="character" src="mazegame_images/man3.png" onclick="selectCharacter(2)">
+    </div>
+    <div id="startButtonWrapper">
+  <button onclick="startGame()">開始遊戲</button>
+</div>
+
+
+  </div>
+
+  <div id="mazeScreen" class="game-screen">
+  
+  <div id="floorIndicator" style="
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  padding: 36px 42px;
+  background: rgba(0, 0, 0, 0.5);
+  color: white;
+  font-size: 46px;
+  border-radius: 8px;
+  font-weight: bold;
+  transform: translateX(-50%);
+  z-index: 10;">
+</div>
+
+  <div id="mazeInnerContainer">
+    <img id="characterImg" src="">
+    <img id="leftBtn" class="arrow-button" src="mazegame_images/left.png" onclick="handleDirectionInput('left')">
+    <img id="rightBtn" class="arrow-button" src="mazegame_images/right.png" onclick="handleDirectionInput('right')">
+	
+	<div id="battleOverlay" style="display: none;">
+  <h2 style="text-align:center;">怪物出現了！</h2>
+  <div style="text-align:center">
+    <div id="monsterBox">
+  <img id="monsterImg" src="mazegame_images/monster1.png" onclick="clickMonster()">
+</div>
+
+    <div id="hearts">❤️❤️❤️</div>
+    <button id="backToMazeBtn" onclick="returnToMazeFromBattle()" style="display:none">返回迷宮</button>
+  </div>
+</div>
+  
+  </div>
+</div>
+
+  <div id="treasureScreen" class="game-screen">
+    <h2 style="text-align:center;">你找到了寶藏！</h2>
+    <div style="text-align:center">
+      
+      <div>
+        <img class="treasure" src="mazegame_images/teasure1.png" onclick="pickTreasure(this)">
+        <img class="treasure" src="mazegame_images/teasure1.png" onclick="pickTreasure(this)">
+        <img class="treasure" src="mazegame_images/teasure1.png" onclick="pickTreasure(this)">
+      </div>
+      <div id="treasureResult" style="margin-top: 20px;"></div>
+      <button onclick="returnToTitle()">返回標題</button>
+    </div>
+  </div>
+
+<script>
+  const gameState = {
+    selectedCharacter: null,
+    pathAnswer: [],
+    currentPathIndex: 0,
+    monsterHearts: 3,
+    treasureResult: null,
+    currentBackground: null,
+    pathFinalReached: false
+  };
+
+  const imagePaths = {
+    characters: [
+      'mazegame_images/man1.png',
+      'mazegame_images/man2.png',
+      'mazegame_images/man3.png'
+    ],
+    gameBackgrounds: [
+      'mazegame_images/gamebc1.png',
+      'mazegame_images/gamebc2.png',
+      'mazegame_images/gamebc3.png'
+    ],
+    treasureItems: {
+      diamondsword: 'mazegame_images/diamondsword.png',
+      diamond: 'mazegame_images/diamond.png',
+      coin: 'mazegame_images/coin.png'
+    }
+  };
+
+  function generateNewPath() {
+    gameState.pathAnswer = Array.from({ length: 8 }, () => Math.random() < 0.5 ? 'left' : 'right');
+  }
+
+  function selectCharacter(char) {
+    gameState.selectedCharacter = char;
+    document.getElementById('characterImg').src = imagePaths.characters[char];
+    for (let i = 0; i < 3; i++) {
+      const el = document.getElementById('char' + i);
+      el.classList.toggle('selected', i === char);
+    }
+  }
+
+  function startGame() {
+    if (gameState.selectedCharacter === null) {
+      alert('請先選擇角色！');
+      return;
+    }
+    if (!gameState.pathAnswer.length || gameState.pathFinalReached) {
+      generateNewPath();
+      gameState.pathFinalReached = false;
+    }
+    gameState.currentPathIndex = 0;
+
+    const bg = imagePaths.gameBackgrounds[Math.floor(Math.random() * imagePaths.gameBackgrounds.length)];
+    gameState.currentBackground = bg;
+    document.getElementById('mazeInnerContainer').style.backgroundImage = `url(${bg})`;
+
+    document.getElementById('titleScreen').classList.remove('visible');
+    document.getElementById('mazeScreen').classList.add('visible');
+    document.getElementById('characterImg').src = imagePaths.characters[gameState.selectedCharacter];
+	updateFloorIndicator();
+  }
+  
+  
+
+  function handleDirectionInput(direction) {
+
+   const flash = document.createElement('div');
+flash.className = 'stepFlash';
+if (direction !== gameState.pathAnswer[gameState.currentPathIndex]) {
+  flash.classList.add('wrong'); // 走錯才變紅色
+}
+
+    document.getElementById('mazeScreen').appendChild(flash);
+    setTimeout(() => flash.remove(), 200);
+
+    if (direction === gameState.pathAnswer[gameState.currentPathIndex]) {
+	
+	
+	 // ✅ 淡出迷霧動畫
+  const mist = document.createElement('div');
+  mist.className = 'mistFlash';
+  document.getElementById('mazeInnerContainer').appendChild(mist);
+  setTimeout(() => mist.remove(), 300);
+  
+  // ✅ 加角色跳動畫
+  document.getElementById('characterImg').classList.add('advanceAnim');
+  setTimeout(() => {
+    document.getElementById('characterImg').classList.remove('advanceAnim');
+  }, 300);
+
+  gameState.currentPathIndex++;
+  updateFloorIndicator();
+
+  if (gameState.currentPathIndex >= 8) {
+    gameState.pathFinalReached = true;
+    document.getElementById('mazeScreen').classList.remove('visible');
+    document.getElementById('treasureScreen').classList.add('visible');
+    return;
+  }
+}
+ else {
+      if (Math.random() < 0.5) {
+  // 不再切換到 battleScreen，而是顯示 overlay
+  document.getElementById('battleOverlay').style.display = 'block';
+  document.getElementById('characterImg').style.display = 'none';
+  document.getElementById('leftBtn').style.display = 'none';
+  document.getElementById('rightBtn').style.display = 'none';
+
+  gameState.monsterHearts = 3;
+  document.getElementById('monsterImg').src = 'mazegame_images/monster1.png';
+  const monster = document.getElementById('monsterImg');
+monster.classList.add('monster-in');
+setTimeout(() => monster.classList.remove('monster-in'), 600);
+
+  document.getElementById('hearts').innerText = '❤️❤️❤️';
+  document.getElementById('backToMazeBtn').style.display = 'none';
+}
+
+ else {
+        gameState.currentPathIndex = 0;
+		updateFloorIndicator();
+      }
+    }
+  }
+
+  function clickMonster() {
+  const monster = document.getElementById('monsterImg');  // ✅ 抓圖片
+
+  monster.classList.add('monster-hit');
+  setTimeout(() => monster.classList.remove('monster-hit'), 200);
+
+
+    if (gameState.monsterHearts > 0) {
+      gameState.monsterHearts--;
+      document.getElementById('hearts').innerText = '❤️'.repeat(gameState.monsterHearts);
+      if (gameState.monsterHearts <= 0) {
+        document.getElementById('monsterImg').src = 'mazegame_images/monster1_dead.png';
+        document.getElementById('backToMazeBtn').style.display = 'inline-block';
+      }
+    }
+  }
+
+function returnToMazeFromBattle() {
+  document.getElementById('battleOverlay').style.display = 'none';
+  document.getElementById('characterImg').style.display = 'block';
+  document.getElementById('leftBtn').style.display = 'block';
+  document.getElementById('rightBtn').style.display = 'block';
+  gameState.currentPathIndex = 0;
+  updateFloorIndicator();
+}
+
+
+
+
+  function pickTreasure(el) {
+    if (el.classList.contains('clicked')) return;
+    document.querySelectorAll('.treasure').forEach(t => t.classList.add('clicked'));
+
+    const r = Math.random();
+    let prize;
+    if (r < 0.1) prize = imagePaths.treasureItems.diamondsword;
+    else if (r < 0.4) prize = imagePaths.treasureItems.diamond;
+    else prize = imagePaths.treasureItems.coin;
+
+    el.classList.add('shake');
+    document.getElementById('treasureResult').innerHTML = `<img src="${prize}" width="100">`;
+  }
+
+  function returnToTitle() {
+    document.querySelectorAll('.game-screen').forEach(el => el.classList.remove('visible'));
+    document.getElementById('titleScreen').classList.add('visible');
+    gameState.currentPathIndex = 0;
+    gameState.pathAnswer = [];
+    gameState.treasureResult = null;
+    gameState.pathFinalReached = false;
+    document.getElementById('mazeInnerContainer').style.backgroundImage = `url('mazegame_images/bc1.png')`;
+  }
+  function updateFloorIndicator() {
+  const floor = gameState.currentPathIndex + 1;
+  document.getElementById('floorIndicator').innerText = `第 ${floor} 層`;
+}
+
+</script>
+
+
+
+</body>
+</html>
